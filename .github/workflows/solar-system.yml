@@ -1,33 +1,42 @@
-name: Solar System Workflow
-
-on: 
-  workflow_dispatch:
+name: Solar System
+on:
   push:
-    branches:
-      - main
-      - 'feature/*'
-    
-jobs:
-    unit-testing:
-        name: Unit Testing
-        runs-on: ubuntu-latest
-        steps:
-        - name: Checkout Repository
-          uses: actions/checkout@v4
 
-        - name: Setup NodeJS Version
-          uses: actions/setup-node@v3
-          with:
-            node-version: 20
-    
-        - name: Install Dependencies
-          run: npm install
-    
-        - name: Unit Testing
-          run: npm test
-          
-        - name: Archive Test Result
-          uses: actions/upload-artifact@v3
-          with:
-            name: Mocha-Test-Result
-            path: test-results.xml
+jobs:
+  unit-testing:
+    name: Unit Testing
+    runs-on: ${{ matrix.operating_system }}
+    strategy:
+      matrix:
+        nodejs_version: [18, 20]
+        operating_system: [ubuntu-latest, macos-latest]
+        exclude:
+          - nodejs_version: 18
+            operating_system: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.nodejs_version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.nodejs_version }}
+
+      - name: Cache NPM dependencies
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Archive Test Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: mocha-test-results
+          path: test-results.xml
